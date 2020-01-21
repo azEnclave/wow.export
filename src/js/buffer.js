@@ -19,6 +19,7 @@ const LITTLE_ENDIAN = {
 	WRITE_INT: Buffer.prototype.writeIntLE,
 	WRITE_UINT: Buffer.prototype.writeUIntLE,
 	WRITE_FLOAT: Buffer.prototype.writeFloatLE,
+	WRITE_DOUBLE: Buffer.prototype.writeDoubleLE,
 	WRITE_BIG_INT: Buffer.prototype.writeBigInt64LE,
 	WRITE_BIG_UINT: Buffer.prototype.writeBigUInt64LE
 };
@@ -33,6 +34,7 @@ const BIG_ENDIAN = {
 	WRITE_INT: Buffer.prototype.writeIntBE,
 	WRITE_UINT: Buffer.prototype.writeUIntBE,
 	WRITE_FLOAT: Buffer.prototype.writeFloatBE,
+	WRITE_DOUBLE: Buffer.prototype.writeDoubleBE,
 	WRITE_BIG_INT: Buffer.prototype.writeBigInt64BE,
 	WRITE_BIG_UINT: Buffer.prototype.writeBigUInt64BE
 };
@@ -739,6 +741,22 @@ class BufferWrapper {
 	 */
 	writeFloatBE(value) {
 		return this._writeInt(value, BIG_ENDIAN.WRITE_FLOAT, 4);
+	}
+
+	/**
+	 * Write a double in little endian.
+	 * @param {double} value 
+	 */
+	writeDoubleLE(value) {
+		return this._writeInt(value, LITTLE_ENDIAN.WRITE_DOUBLE, 8);
+	}
+
+	/**
+	 * Write a double in big endian.
+	 * @param {double} value 
+	 */
+	writeDoubleBE(value) {
+		return this._writeInt(value, BIG_ENDIAN.WRITE_DOUBLE, 8);
 	}
 
 	/**
