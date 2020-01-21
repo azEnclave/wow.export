@@ -684,7 +684,7 @@ class BufferWrapper {
 	 * Write a signed 64-bit integer in little endian.
 	 * @param {BigInt} value
 	 */
-	writeBigInt64LE(value) {
+	writeInt64LE(value) {
 		this._writeInt(value, LITTLE_ENDIAN.WRITE_BIG_INT, 8);
 	}
 
@@ -692,7 +692,7 @@ class BufferWrapper {
 	 * Write a unsigned 64-bit integer in little endian.
 	 * @param {BigInt} value
 	 */
-	writeBigUInt64LE(value) {
+	writeUInt64LE(value) {
 		this._writeInt(value, LITTLE_ENDIAN.WRITE_BIG_UINT, 8);
 	}
 
@@ -700,7 +700,7 @@ class BufferWrapper {
 	 * Write a signed 64-bit integer in big endian.
 	 * @param {bBigIntigint} value
 	 */
-	writeBigInt64BE(value) {
+	writeInt64BE(value) {
 		this._writeInt(value, BIG_ENDIAN.WRITE_BIG_INT, 8);
 	}
 
@@ -708,7 +708,7 @@ class BufferWrapper {
 	 * Write a unsigned 64-bit integer in big endian.
 	 * @param {BigInt} value
 	 */
-	writeBigUInt64BE(value) {
+	writeUInt64BE(value) {
 		this._writeInt(value, BIG_ENDIAN.WRITE_BIG_UINT, 8);
 	}
 
