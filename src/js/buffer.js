@@ -507,253 +507,225 @@ class BufferWrapper {
 	/**
 	 * Write a signed 8-bit integer in little endian.
 	 * @param {number} value
-	 * @returns {number|number[]}
 	 */
 	writeInt8(value) {
-		return this._writeInt(value, LITTLE_ENDIAN.WRITE_INT, 1);
+		this._writeInt(value, LITTLE_ENDIAN.WRITE_INT, 1);
 	}
 
 	/**
 	 * Write a unsigned 8-bit integer in little endian.
 	 * @param {number} value
-	 * @returns {number|number[]}
 	 */
 	writeUInt8(value) {
-		return this._writeInt(value, LITTLE_ENDIAN.WRITE_UINT, 1);
+		this._writeInt(value, LITTLE_ENDIAN.WRITE_UINT, 1);
 	}
 
 	/**
 	 * Write a signed 16-bit integer in little endian.
 	 * @param {number} value
-	 * @returns {number|number[]}
 	 */
 	writeInt16LE(value) {
-		return this._writeInt(value, LITTLE_ENDIAN.WRITE_INT, 2);
+		this._writeInt(value, LITTLE_ENDIAN.WRITE_INT, 2);
 	}
 
 	/**
 	 * Write a unsigned 16-bit integer in little endian.
 	 * @param {number} value
-	 * @returns {number|number[]}
 	 */
 	writeUInt16LE(value) {
-		return this._writeInt(value, LITTLE_ENDIAN.WRITE_UINT, 2);
+		this._writeInt(value, LITTLE_ENDIAN.WRITE_UINT, 2);
 	}
 
 	/**
 	 * Write a signed 16-bit integer in big endian.
 	 * @param {number} value
-	 * @returns {number|number[]}
 	 */
 	writeInt16BE(value) {
-		return this._writeInt(value, BIG_ENDIAN.WRITE_INT, 2);
+		this._writeInt(value, BIG_ENDIAN.WRITE_INT, 2);
 	}
 
 	/**
 	 * Write a unsigned 16-bit integer in big endian.
 	 * @param {number} value
-	 * @returns {number|number[]}
 	 */
 	writeUInt16BE(value) {
-		return this._writeInt(value, BIG_ENDIAN.WRITE_UINT, 2);
+		this._writeInt(value, BIG_ENDIAN.WRITE_UINT, 2);
 	}
 
 	/**
 	 * Write a signed 24-bit integer in little endian.
 	 * @param {number} value
-	 * @returns {number|number[]}
 	 */
 	writeInt24LE(value) {
-		return this._writeInt(value, LITTLE_ENDIAN.WRITE_INT, 3);
+		this._writeInt(value, LITTLE_ENDIAN.WRITE_INT, 3);
 	}
 
 	/**
 	 * Write a unsigned 24-bit integer in little endian.
 	 * @param {number} value
-	 * @returns {number|number[]}
 	 */
 	writeUInt24LE(value) {
-		return this._writeInt(value, LITTLE_ENDIAN.WRITE_UINT, 3);
+		this._writeInt(value, LITTLE_ENDIAN.WRITE_UINT, 3);
 	}
 
 	/**
 	 * Write a signed 24-bit integer in big endian.
 	 * @param {number} value
-	 * @returns {number|number[]}
 	 */
 	writeInt24BE(value) {
-		return this._writeInt(value, BIG_ENDIAN.WRITE_INT, 3);
+		this._writeInt(value, BIG_ENDIAN.WRITE_INT, 3);
 	}
 
 	/**
 	 * Write a unsigned 24-bit integer in big endian.
 	 * @param {number} value
-	 * @returns {number|number[]}
 	 */
 	writeUInt24BE(value) {
-		return this._writeInt(value, BIG_ENDIAN.WRITE_UINT, 3);
+		this._writeInt(value, BIG_ENDIAN.WRITE_UINT, 3);
 	}
 
 	/**
 	 * Write a signed 32-bit integer in little endian.
 	 * @param {number} value
-	 * @returns {number|number[]}
 	 */
 	writeInt32LE(value) {
-		return this._writeInt(value, LITTLE_ENDIAN.WRITE_INT, 4);
+		this._writeInt(value, LITTLE_ENDIAN.WRITE_INT, 4);
 	}
 
 	/**
 	 * Write a unsigned 32-bit integer in little endian.
 	 * @param {number} value
-	 * @returns {number|number[]}
 	 */
 	writeUInt32LE(value) {
-		return this._writeInt(value, LITTLE_ENDIAN.WRITE_UINT, 4);
+		this._writeInt(value, LITTLE_ENDIAN.WRITE_UINT, 4);
 	}
 
 	/**
 	 * Write a signed 32-bit integer in big endian.
 	 * @param {number} value
-	 * @returns {number|number[]}
 	 */
 	writeInt32BE(value) {
-		return this._writeInt(value, BIG_ENDIAN.WRITE_INT, 4);
+		this._writeInt(value, BIG_ENDIAN.WRITE_INT, 4);
 	}
 
 	/**
 	 * Write a unsigned 32-bit integer in big endian.
 	 * @param {number} value
-	 * @returns {number|number[]}
 	 */
 	writeUInt32BE(value) {
-		return this._writeInt(value, BIG_ENDIAN.WRITE_UINT, 4);
+		this._writeInt(value, BIG_ENDIAN.WRITE_UINT, 4);
 	}
 
 	/**
 	 * Write a signed 40-bit integer in little endian.
 	 * @param {number} value
-	 * @returns {number|number[]}
 	 */
 	writeInt40LE(value) {
-		return this._writeInt(value, LITTLE_ENDIAN.WRITE_INT, 5);
+		this._writeInt(value, LITTLE_ENDIAN.WRITE_INT, 5);
 	}
 
 	/**
 	 * Write a unsigned 40-bit integer in little endian.
 	 * @param {number} value
-	 * @returns {number|number[]}
 	 */
 	writeUInt40LE(value) {
-		return this._writeInt(value, LITTLE_ENDIAN.WRITE_UINT, 5);
+		this._writeInt(value, LITTLE_ENDIAN.WRITE_UINT, 5);
 	}
 
 	/**
 	 * Write a signed 40-bit integer in big endian.
 	 * @param {number} value
-	 * @returns {number|number[]}
 	 */
 	writeInt40BE(value) {
-		return this._writeInt(value, BIG_ENDIAN.WRITE_INT, 5);
+		this._writeInt(value, BIG_ENDIAN.WRITE_INT, 5);
 	}
 	
 	/**
 	 * Write a unsigned 40-bit integer in big endian.
 	 * @param {number} value
-	 * @returns {number|number[]}
 	 */
 	writeUInt40BE(value) {
-		return this._writeInt(value, BIG_ENDIAN.WRITE_UINT, 5);
+		this._writeInt(value, BIG_ENDIAN.WRITE_UINT, 5);
 	}
 
 	/**
 	 * Write a signed 48-bit integer in little endian.
 	 * @param {number} value
-	 * @returns {number|number[]}
 	 */
 	writeInt48LE(value) {
-		return this._writeInt(value, LITTLE_ENDIAN.WRITE_INT, 6);
+		this._writeInt(value, LITTLE_ENDIAN.WRITE_INT, 6);
 	}
 
 	/**
 	 * Write a unsigned 48-bit integer in little endian.
 	 * @param {number} value
-	 * @returns {number|number[]}
 	 */
 	writeUInt48LE(value) {
-		return this._writeInt(value, LITTLE_ENDIAN.WRITE_UINT, 6);
+		this._writeInt(value, LITTLE_ENDIAN.WRITE_UINT, 6);
 	}
 
 	/**
 	 * Write a signed 48-bit integer in big endian.
 	 * @param {number} value
-	 * @returns {number|number[]}
 	 */
 	writeInt48BE(value) {
-		return this._writeInt(value, BIG_ENDIAN.WRITE_INT, 6);
+		this._writeInt(value, BIG_ENDIAN.WRITE_INT, 6);
 	}
 
 	/**
 	 * Write a unsigned 48-bit integer in big endian.
 	 * @param {number} value
-	 * @returns {number|number[]}
 	 */
 	writeUInt48BE(value) {
-		return this._writeInt(value, BIG_ENDIAN.WRITE_UINT, 6);
+		this._writeInt(value, BIG_ENDIAN.WRITE_UINT, 6);
 	}
 
 	/**
 	 * Write a signed 64-bit integer in little endian.
 	 * @param {bigint} value
-	 * @returns {number|number[]}
 	 */
 	writeBigInt64LE(value) {
-		return this._writeInt(value, LITTLE_ENDIAN.WRITE_BIG_INT, 8);
+		this._writeInt(value, LITTLE_ENDIAN.WRITE_BIG_INT, 8);
 	}
 
 	/**
 	 * Write a unsigned 64-bit integer in little endian.
 	 * @param {bigint} value
-	 * @returns {number|number[]}
 	 */
 	writeBigUInt64LE(value) {
-		return this._writeInt(value, LITTLE_ENDIAN.WRITE_BIG_UINT, 8);
+		this._writeInt(value, LITTLE_ENDIAN.WRITE_BIG_UINT, 8);
 	}
 
 	/**
 	 * Write a signed 64-bit integer in big endian.
 	 * @param {bigint} value
-	 * @returns {number|number[]}
 	 */
 	writeBigInt64BE(value) {
-		return this._writeInt(value, BIG_ENDIAN.WRITE_BIG_INT, 8);
+		this._writeInt(value, BIG_ENDIAN.WRITE_BIG_INT, 8);
 	}
 
 	/**
 	 * Write a unsigned 64-bit integer in big endian.
 	 * @param {bigint} value
-	 * @returns {number|number[]}
 	 */
 	writeBigUInt64BE(value) {
-		return this._writeInt(value, BIG_ENDIAN.WRITE_BIG_UINT, 8);
+		this._writeInt(value, BIG_ENDIAN.WRITE_BIG_UINT, 8);
 	}
 
 	/**
 	 * Write a float in little endian.
 	 * @param {number} value
-	 * @returns {float|float[]}
 	 */
 	writeFloatLE(value) {
-		return this._writeInt(value, LITTLE_ENDIAN.WRITE_FLOAT, 4);
+		this._writeInt(value, LITTLE_ENDIAN.WRITE_FLOAT, 4);
 	}
 
 	/**
 	 * Write a float in big endian.
 	 * @param {number} value
-	 * @returns {float|float[]}
 	 */
 	writeFloatBE(value) {
-		return this._writeInt(value, BIG_ENDIAN.WRITE_FLOAT, 4);
+		this._writeInt(value, BIG_ENDIAN.WRITE_FLOAT, 4);
 	}
 
 	/**
@@ -761,7 +733,7 @@ class BufferWrapper {
 	 * @param {double} value 
 	 */
 	writeDoubleLE(value) {
-		return this._writeInt(value, LITTLE_ENDIAN.WRITE_DOUBLE, 8);
+		this._writeInt(value, LITTLE_ENDIAN.WRITE_DOUBLE, 8);
 	}
 
 	/**
@@ -769,7 +741,7 @@ class BufferWrapper {
 	 * @param {double} value 
 	 */
 	writeDoubleBE(value) {
-		return this._writeInt(value, BIG_ENDIAN.WRITE_DOUBLE, 8);
+		this._writeInt(value, BIG_ENDIAN.WRITE_DOUBLE, 8);
 	}
 
 	/**
