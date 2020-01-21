@@ -197,7 +197,9 @@ const exportFiles = async (files, isLocal = false) => {
 						break;
 
 					case 'OBJ':
-						const exportOBJ = ExportHelper.replaceExtension(exportPath, '.obj');
+					case 'FBX':
+						const isFBX = format === 'FBX';
+						const exportPathNew = ExportHelper.replaceExtension(exportPath, isFBX ? '.fbx' : '.obj');
 
 						if (fileNameLower.endsWith('.m2')) {
 							const exporter = new M2Exporter(data, selectedVariantTexID);
@@ -206,8 +208,15 @@ const exportFiles = async (files, isLocal = false) => {
 							if (fileName == activePath)
 								exporter.setGeosetMask(core.view.modelViewerGeosets);
 
-							await exporter.exportAsOBJ(exportOBJ, core.view.config.modelsExportCollision);
+							if (isFBX)
+								await exporter.exportAsFBX(exportPathNew);
+							else
+								await exporter.exportAsOBJ(exportPathNew, core.view.config.modelsExportCollision);
 						} else if (fileNameLower.endsWith('.wmo')) {
+							// ToDo: Implement FBX support for WMO objects.
+							if (isFBX)
+								throw new Error('Exporting WMO models as FBX is currently not supported.');
+
 							// WMO loading currently loads group objects directly from CASC.
 							// In order to load these properly, we would need to know the internal name here.
 							if (isLocal)
@@ -221,7 +230,7 @@ const exportFiles = async (files, isLocal = false) => {
 								exporter.setDoodadSetMask(core.view.modelViewerWMOSets);
 							}
 
-							await exporter.exportAsOBJ(exportOBJ);
+							await exporter.exportAsOBJ(exportPathNew);
 							WMOExporter.clearCache();
 						} else {
 							throw new Error('Unexpected model format: ' + fileName);

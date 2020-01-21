@@ -13,6 +13,7 @@ const BLPFile = require('../../casc/blp');
 const M2Loader = require('../loaders/M2Loader');
 const OBJWriter = require('../writers/OBJWriter');
 const MTLWriter = require('../writers/MTLWriter');
+const FBXWriter = require('../writers/FBXWriter');
 const GeosetMapper = require('../GeosetMapper');
 const ExportHelper = require('../../casc/export-helper');
 
@@ -33,6 +34,35 @@ class M2Exporter {
 	 */
 	setGeosetMask(mask) {
 		this.geosetMask = mask;
+	}
+
+	_exportTextures() {
+		
+	}
+
+	/**
+	 * Export the M2 model as an AutoDesk FBX.
+	 * @param {string} out 
+	 */
+	async exportAsFBX(out) {
+		await this.m2.load();
+		//const skin = await this.m2.getSkin(0);
+
+		const config = core.view.config;
+
+		const fbx = new FBXWriter(out);
+
+		log.write('Exporting M2 model %s as FBX: %s', this.m2.name, out);
+
+		// User internal M2 name for object.
+		fbx.setName(this.m2.name);
+
+		// Vertices, normals, UVs.
+		fbx.setVertices(this.m2.vertices);
+		fbx.setNormals(this.m2.normals);
+		fbx.setUVs(this.m2.uv);
+
+		await fbx.write(config.overwriteFiles);
 	}
 
 	/**
