@@ -477,6 +477,19 @@ class BufferWrapper {
 	}
 
 	/**
+	 * Write a string to the buffer.
+	 * @param {string} str 
+	 * @param {string} encoding 
+	 */
+	writeString(str, encoding = 'utf8') {
+		const byteLength = Buffer.byteLength(str, encoding);
+		this._checkBounds(byteLength);
+
+		this._buf.write(str, this.offset, byteLength, encoding);
+		this._ofs += byteLength;
+	}
+
+	/**
 	 * Read the entire buffer split by lines (\r\n, \n, \r).
 	 * Preserves current offset of the wrapper.
 	 * @param {string} encoding 
