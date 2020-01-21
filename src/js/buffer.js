@@ -698,7 +698,7 @@ class BufferWrapper {
 
 	/**
 	 * Write a signed 64-bit integer in big endian.
-	 * @param {bBigIntigint} value
+	 * @param {BigInt} value
 	 */
 	writeInt64BE(value) {
 		this._writeInt(value, BIG_ENDIAN.WRITE_BIG_INT, 8);
