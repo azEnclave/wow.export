@@ -68,7 +68,7 @@ class WMOExporter {
 		const groupMask = this.groupMask;
 		const doodadSetMask = this.doodadSetMask;
 
-		const wmoName = path.basename(out, '.wmo');
+		const wmoName = path.basename(out, '.obj');
 		obj.setName(wmoName);
 
 		log.write('Exporting WMO model %s as OBJ: %s', wmoName, out);
