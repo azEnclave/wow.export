@@ -225,7 +225,7 @@ const exportFiles = async (files, isLocal = false) => {
 
 							if (format === 'OBJ')
 								await exporter.exportAsOBJ(exportPath);
-							else
+							else if (format === 'GLTF')
 								await exporter.exportAsGLTF(exportPath);
 
 							WMOExporter.clearCache();
