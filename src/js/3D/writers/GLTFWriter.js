@@ -233,7 +233,6 @@ class GLTFWriter {
 		writeData(1, this.normals, 3);
 		writeData(2, this.uvs, 2);
 
-		const scene = root.scenes[0];
 		const nodes = root.nodes;
 		for (const mesh of this.meshes) {
 			const bufferViewIndex = root.bufferViews.length;
