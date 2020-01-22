@@ -45,10 +45,20 @@ class WMOExporter {
 	}
 
 	/**
+	 * Export the WMO model as a GLTF file.
+	 * @param {string} out 
+	 */
+	async exportAsGLTF(out) {
+
+	}
+
+	/**
 	 * Export the WMO model as a WaveFront OBJ.
 	 * @param {string} out
 	 */
 	async exportAsOBJ(out) {
+		out = ExportHelper.replaceExtension(out, '.obj');
+
 		const casc = core.view.casc;
 		const obj = new OBJWriter(out);
 		const mtl = new MTLWriter(ExportHelper.replaceExtension(out, '.mtl'));

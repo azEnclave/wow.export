@@ -197,8 +197,7 @@ const exportFiles = async (files, isLocal = false) => {
 						break;
 
 					case 'OBJ':
-						const exportOBJ = ExportHelper.replaceExtension(exportPath, '.obj');
-
+					case 'GLTF':
 						if (fileNameLower.endsWith('.m2')) {
 							const exporter = new M2Exporter(data, selectedVariantTexID);
 
@@ -206,7 +205,10 @@ const exportFiles = async (files, isLocal = false) => {
 							if (fileName == activePath)
 								exporter.setGeosetMask(core.view.modelViewerGeosets);
 
-							await exporter.exportAsOBJ(exportOBJ, core.view.config.modelsExportCollision);
+							if (format === 'OBJ')
+								await exporter.exportAsOBJ(exportPath, core.view.config.modelsExportCollision);
+							else if (format === 'GLTF')
+								await exporter.exportAsGLTF(exportPath);
 						} else if (fileNameLower.endsWith('.wmo')) {
 							// WMO loading currently loads group objects directly from CASC.
 							// In order to load these properly, we would need to know the internal name here.
@@ -221,7 +223,11 @@ const exportFiles = async (files, isLocal = false) => {
 								exporter.setDoodadSetMask(core.view.modelViewerWMOSets);
 							}
 
-							await exporter.exportAsOBJ(exportOBJ);
+							if (format === 'OBJ')
+								await exporter.exportAsOBJ(exportPath);
+							else
+								await exporter.exportAsGLTF(exportPath);
+
 							WMOExporter.clearCache();
 						} else {
 							throw new Error('Unexpected model format: ' + fileName);
