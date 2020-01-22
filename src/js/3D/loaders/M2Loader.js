@@ -168,7 +168,7 @@ class M2Loader {
 				parentBone: data.readInt16LE(),
 				unk: data.readUInt16LE(3),
 				translation: this.readM2Track(ofs, () => data.readFloatLE(3)),
-				rotation: this.readM2Track(ofs, () => data.readFloatLE(4)),
+				rotation: this.readM2Track(ofs, () => (data.readUInt16LE() / 32767) - 1),
 				scale: this.readM2Track(ofs, () => data.readFloatLE(3)),
 				pivot: data.readFloatLE(3)
 			};
