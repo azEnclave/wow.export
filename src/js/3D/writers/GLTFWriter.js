@@ -107,11 +107,16 @@ class GLTFWriter {
 				version: '2.0',
 				generator: util.format('wow.export v%s %s [%s]', manifest.version, manifest.flavour, manifest.guid)
 			},
-			nodes: [],
-			scenes: [
+			nodes: [
 				{
 					name: this.name,
-					nodes: []
+					children: []
+				}
+			],
+			scenes: [
+				{
+					name: this.name + 'Scene',
+					nodes: [0]
 				}
 			],
 			buffers: [
@@ -271,7 +276,8 @@ class GLTFWriter {
 				]
 			});
 
-			scene.nodes.push(nodes.length);
+			const nodeIndex = nodes.length;
+			nodes[0].children.push(nodeIndex);
 			nodes.push({ name: mesh.name, mesh: meshIndex });
 		}
 
