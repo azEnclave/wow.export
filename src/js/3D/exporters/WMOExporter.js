@@ -14,6 +14,7 @@ const WMOLoader = require('../loaders/WMOLoader');
 const OBJWriter = require('../writers/OBJWriter');
 const MTLWriter = require('../writers/MTLWriter');
 const CSVWriter = require('../writers/CSVWriter');
+const GLTFWriter = require('../writers/GLTFWriter');
 const ExportHelper = require('../../casc/export-helper');
 const M2Exporter = require('./M2Exporter');
 
@@ -44,42 +45,17 @@ class WMOExporter {
 		this.doodadSetMask = mask;
 	}
 
-	/**
-	 * Export the WMO model as a GLTF file.
-	 * @param {string} out 
-	 */
-	async exportAsGLTF(out) {
-
-	}
-
-	/**
-	 * Export the WMO model as a WaveFront OBJ.
-	 * @param {string} out
-	 */
-	async exportAsOBJ(out) {
-		out = ExportHelper.replaceExtension(out, '.obj');
-
+	async exportTextures(out) {
+		const wmo = this.wmo;
 		const casc = core.view.casc;
-		const obj = new OBJWriter(out);
-		const mtl = new MTLWriter(ExportHelper.replaceExtension(out, '.mtl'));
-
 		const config = core.view.config;
 
-		const groupMask = this.groupMask;
-		const doodadSetMask = this.doodadSetMask;
-
-		const wmoName = path.basename(out, '.obj');
-		obj.setName(wmoName);
-
-		log.write('Exporting WMO model %s as OBJ: %s', wmoName, out);
-
-		const wmo = this.wmo;
-		await wmo.load();
-
-		// Textures
 		const isClassic = !!wmo.textureNames;
 		const materialCount = wmo.materials.length;
+
+		const textureMap = new Map();
 		const materialMap = new Map();
+
 		for (let i = 0; i < materialCount; i++) {
 			const material = wmo.materials[i];
 
@@ -128,13 +104,44 @@ class WMOExporter {
 						log.write('Skipping WMO texture export %s (file exists, overwrite disabled)', texPath);
 					}
 
-					mtl.addMaterial(fileDataID, texFile);
 					materialMap.set(i, fileDataID);
+					textureMap.set(fileDataID, texFile);
 				} catch (e) {
 					log.write('Failed to export texture %d for WMO: %s', fileDataID, e.message);
 				}
 			}
 		}
+
+		return { materialMap, textureMap };
+	}
+
+	/**
+	 * Export the WMO model as a GLTF file.
+	 * @param {string} out 
+	 */
+	async exportAsGLTF(out) {
+		const casc = core.view.casc;
+		const config = core.view.config;
+
+		const outGLTF = ExportHelper.replaceExtension(out, '.gltf');
+
+		// Skip export if file exists and overwriting is disabled.
+		if (!config.overwriteFiles && generics.fileExists(outGLTF))
+			return log.write('Skipping GLTF export of %s (already exists, overwrite disabled)', outGLTF);
+
+		const wmoName = path.basename(out, '.wmo');
+		const gltf = new GLTFWriter(outGLTF, wmoName);
+
+		const groupMask = this.groupMask;
+		const doodadSetMask = this.doodadSetMask;
+
+		log.write('Exporting WMO model %s as GLTF: %s', wmoName, outGLTF);
+
+		const wmo = this.wmo;
+		await wmo.load();
+
+		const { textureMap, materialMap } = await this.exportTextures(out);
+		gltf.setTextureMap(textureMap);
 
 		const groups = [];
 		let nInd = 0;
@@ -165,16 +172,16 @@ class WMOExporter {
 			if (mask && !mask.has(i))
 				continue;
 
-			// 3 verts per indices.
+			// 3 vertices per indices.
 			nInd += group.vertices.length / 3;
 
 			// Store the valid groups for quicker iteration later.
 			groups.push(group);
 		}
 
-		const vertsArray = new Array(nInd * 3);
-		const normalsArray = new Array(nInd * 3);
-		const uvsArray = new Array(nInd * 2);
+		const vertices = new Array(nInd * 3);
+		const normals = new Array(nInd * 3);
+		const uvs = new Array(nInd * 2);
 
 		// Iterate over groups again and fill the allocated arrays.
 		let indOfs = 0;
@@ -182,26 +189,147 @@ class WMOExporter {
 			const indCount = group.vertices.length / 3;
 
 			const vertOfs = indOfs * 3;
-			const groupVerts = group.vertices;
-			for (let i = 0, n = groupVerts.length; i < n; i++)
-				vertsArray[vertOfs + i] = groupVerts[i];
+			const groupVertices = group.vertices;
+			for (let i = 0, n = groupVertices.length; i < n; i++)
+				vertices[vertOfs + i] = groupVertices[i];
 
 			// Normals and vertices should match, so re-use vertOfs here.
 			const groupNormals = group.normals;
 			for (let i = 0, n = groupNormals.length; i < n; i++)
-				normalsArray[vertOfs + i] = groupNormals[i];
+				normals[vertOfs + i] = groupNormals[i];
 
 			const uvsOfs = indOfs * 2;
 			if (group.uvs) {
 				// UVs exist, use the first array available.
 				const groupUvs = group.uvs[0];
 				for (let i = 0, n = groupUvs.length; i < n; i++)
-					uvsArray[uvsOfs + i] = groupUvs[i];
+					uvs[uvsOfs + i] = groupUvs[i];
 			} else {
 				// No UVs available for the mesh, zero-fill.
 				const uvCount = indCount * 2;
 				for (let i = 0; i < uvCount; i++)
-					uvsArray[uvsOfs + i] = 0;
+					uvs[uvsOfs + i] = 0;
+			}
+
+			const groupName = wmo.groupNames[group.nameOfs];
+
+			// Load all render batches into the mesh.
+			for (let bI = 0, bC = group.renderBatches.length; bI < bC; bI++) {
+				const batch = group.renderBatches[bI];
+				const indices = new Array(batch.numFaces);
+
+				for (let i = 0; i < batch.numFaces; i++)
+					indices[i] = group.indices[batch.firstFace + i] + indOfs;
+
+				const matID = batch.flags === 2 ? batch.possibleBox2[2] : batch.materialID;
+				gltf.addMesh(groupName + bI, indices, materialMap.get(matID));
+			}
+
+			indOfs += indCount;
+		}
+
+		gltf.setVerticesArray(vertices);
+		gltf.setNormalArray(normals);
+		gltf.setUVArray(uvs);
+
+		// ToDo: Add support for exporting doodads inside a glTF WMO.
+
+		await gltf.write();
+	}
+
+	/**
+	 * Export the WMO model as a WaveFront OBJ.
+	 * @param {string} out
+	 */
+	async exportAsOBJ(out) {
+		out = ExportHelper.replaceExtension(out, '.obj');
+
+		const casc = core.view.casc;
+		const obj = new OBJWriter(out);
+		const mtl = new MTLWriter(ExportHelper.replaceExtension(out, '.mtl'));
+
+		const config = core.view.config;
+
+		const groupMask = this.groupMask;
+		const doodadSetMask = this.doodadSetMask;
+
+		const wmoName = path.basename(out, '.obj');
+		obj.setName(wmoName);
+
+		log.write('Exporting WMO model %s as OBJ: %s', wmoName, out);
+
+		const wmo = this.wmo;
+		await wmo.load();
+
+		// Textures
+		const { materialMap } = await this.exportTextures(out);
+
+		const groups = [];
+		let nInd = 0;
+
+		let mask;
+
+		// Map our user-facing group mask to a WMO mask.
+		if (groupMask) {
+			mask = new Set();
+			for (const group of groupMask) {
+				if (group.checked) {
+					// Add the group index to the mask.
+					mask.add(group.groupIndex);
+				}
+			}
+		}
+
+		// Iterate over the groups once to calculate the total size of our
+		// vertex/normal/uv arrays allowing for pre-allocation.
+		for (let i = 0, n = wmo.groupCount; i < n; i++) {
+			const group = await wmo.getGroup(i);
+
+			// Skip empty groups.
+			if (!group.renderBatches || group.renderBatches.length === 0)
+				continue;
+
+			// Skip masked groups.
+			if (mask && !mask.has(i))
+				continue;
+
+			// 3 vertices per indices.
+			nInd += group.vertices.length / 3;
+
+			// Store the valid groups for quicker iteration later.
+			groups.push(group);
+		}
+
+		const vertices = new Array(nInd * 3);
+		const normals = new Array(nInd * 3);
+		const uvs = new Array(nInd * 2);
+
+		// Iterate over groups again and fill the allocated arrays.
+		let indOfs = 0;
+		for (const group of groups) {
+			const indCount = group.vertices.length / 3;
+
+			const vertOfs = indOfs * 3;
+			const groupVertices = group.vertices;
+			for (let i = 0, n = groupVertices.length; i < n; i++)
+				vertices[vertOfs + i] = groupVertices[i];
+
+			// Normals and vertices should match, so re-use vertOfs here.
+			const groupNormals = group.normals;
+			for (let i = 0, n = groupNormals.length; i < n; i++)
+				normals[vertOfs + i] = groupNormals[i];
+
+			const uvsOfs = indOfs * 2;
+			if (group.uvs) {
+				// UVs exist, use the first array available.
+				const groupUvs = group.uvs[0];
+				for (let i = 0, n = groupUvs.length; i < n; i++)
+					uvs[uvsOfs + i] = groupUvs[i];
+			} else {
+				// No UVs available for the mesh, zero-fill.
+				const uvCount = indCount * 2;
+				for (let i = 0; i < uvCount; i++)
+					uvs[uvsOfs + i] = 0;
 			}
 
 			const groupName = wmo.groupNames[group.nameOfs];
@@ -221,9 +349,9 @@ class WMOExporter {
 			indOfs += indCount;
 		}
 
-		obj.setVertArray(vertsArray);
-		obj.setNormalArray(normalsArray);
-		obj.setUVArray(uvsArray);
+		obj.setVertArray(vertices);
+		obj.setNormalArray(normals);
+		obj.setUVArray(uvs);
 
 		const csvPath = ExportHelper.replaceExtension(out, '_ModelPlacementInformation.csv');
 		if (config.overwriteFiles || !await generics.fileExists(csvPath)) {
