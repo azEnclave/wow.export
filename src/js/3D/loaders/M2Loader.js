@@ -161,7 +161,7 @@ class M2Loader {
 		const base = this.data.offset;
 		this.data.seek(lookupOfs + ofs);
 
-		this.replacableTextureLookup = this.data.readInt16LE(lookupCount);
+		this.replaceableTextureLookup = this.data.readInt16LE(lookupCount);
 
 		this.data.seek(base);
 	}
