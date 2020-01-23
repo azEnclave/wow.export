@@ -170,7 +170,7 @@ class M2Loader {
 				distToDesc: data.readUInt16LE(),
 				zRatioOfChain: data.readUInt16LE(),
 				translation: this.readM2Track(ofs, () => data.readFloatLE(3)),
-				rotation: this.readM2Track(ofs, () => (data.readUInt16LE() / 32767) - 1),
+				rotation: this.readM2Track(ofs, () => data.readUInt16LE(4).map(e => (e / 32767) - 1)),
 				scale: this.readM2Track(ofs, () => data.readFloatLE(3)),
 				pivot: data.readFloatLE(3)
 			};
