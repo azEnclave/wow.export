@@ -22,6 +22,7 @@ class GLTFWriter {
 		this.vertices = [];
 		this.normals = [];
 		this.uvs = [];
+		this.bones = [];
 
 		this.textures = new Map();
 		this.meshes = [];
@@ -33,6 +34,14 @@ class GLTFWriter {
 	 */
 	setTextureMap(map) {
 		this.textures = map;
+	}
+
+	/**
+	 * Set the bones array for this writer.
+	 * @param {Array} bones 
+	 */
+	setBonesArray(bones) {
+		this.bones = bones;
 	}
 
 	/**
@@ -175,12 +184,59 @@ class GLTFWriter {
 
 				}
 			],
+			skins: [
+				{
+					name: this.name + 'Skeleton',
+					joints: [],
+				}
+			],
 			textures: [],
 			images: [],
 			materials: [],
 			meshes: [],
 			scene: 0
 		};
+
+		const nodes = root.nodes;
+		const skin = root.skins[0];
+		const rootChildren = nodes[0].children;
+
+		const boneOffset = nodes.length;
+		const bones = this.bones;
+
+		// Mark first bone as skeleton root.
+		if (bones.length > 0) {
+			skin.skeleton = boneOffset;
+			rootChildren.push(boneOffset);
+		}
+
+		// Bone child lookup.
+		for (let i = 0, n = bones.length; i < n; i++) {
+			const bone = bones[i];
+			if (bone.parentBone > -1) {
+				const parent = bones[bone.parentBone];
+				const parentIndex = boneOffset + i;
+				parent.children ? parent.children.push(parentIndex) : parent.children = [parentIndex];
+			}
+		}
+
+		// Add bone nodes.
+		for (let i = 0, n = bones.length; i < n; i++) {
+			const bone = bones[i];
+			skin.joints.push(boneOffset + i);
+			
+			const defaultAnimRot = bone.rotation.values[0];
+			const defaultAnimTran = bone.translation.values[0];
+
+			const rotation = defaultAnimRot && defaultAnimRot.length > 0 ? defaultAnimRot[0] : [0, 0, 0, 0];
+			const translation = defaultAnimTran && defaultAnimTran.length > 0 ? defaultAnimTran[0] : [0, 0, 0];
+			
+			nodes.push({
+				name: 'Bone_' + i,
+				children: bone.children,
+				rotation, translation
+			});
+		}
 
 		const materialMap = new Map();
 		for (const [fileDataID, texFile] of this.textures) {
@@ -233,7 +289,6 @@ class GLTFWriter {
 		writeData(1, this.normals, 3);
 		writeData(2, this.uvs, 2);
 
-		const nodes = root.nodes;
 		for (const mesh of this.meshes) {
 			const bufferViewIndex = root.bufferViews.length;
 			const accessorIndex = root.accessors.length;
@@ -276,7 +331,7 @@ class GLTFWriter {
 			});
 
 			const nodeIndex = nodes.length;
-			nodes[0].children.push(nodeIndex);
+			rootChildren.push(nodeIndex);
 			nodes.push({ name: mesh.name, mesh: meshIndex });
 		}
 
