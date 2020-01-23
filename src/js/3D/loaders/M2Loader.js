@@ -281,37 +281,44 @@ class M2Loader {
 	 * @param {number} ofs 
 	 */
 	parseChunk_MD21_vertices(ofs) {
-		const verticesCount = this.data.readUInt32LE();
-		const verticesOfs = this.data.readUInt32LE();
+		const data = this.data;
+		const verticesCount = data.readUInt32LE();
+		const verticesOfs = data.readUInt32LE();
 
-		const base = this.data.offset;
-		this.data.seek(verticesOfs + ofs);
+		const base = data.offset;
+		data.seek(verticesOfs + ofs);
 
 		// Read vertices.	
-		const verts = this.vertices = new Array(verticesCount * 3);
-		const normals = this.normals = new Array(verticesCount * 3);
-		const uv = this.uv = new Array(verticesCount * 2);
+		const vertices = this.vertices = Array(verticesCount * 3);
+		const normals = this.normals = Array(verticesCount * 3);
+		const uv = this.uv = Array(verticesCount * 2);
+		const boneWeights = this.boneWeights = Array(verticesCount * 4);
+		const boneIndices = this.boneIndices = Array(verticesCount * 4);
 	
 		for (let i = 0; i < verticesCount; i++) {
 			const index = i * 3;
-			verts[index] = this.data.readFloatLE();
-			verts[index + 2] = this.data.readFloatLE() * -1;
-			verts[index + 1] = this.data.readFloatLE();
+			vertices[index] = data.readFloatLE();
+			vertices[index + 2] = data.readFloatLE() * -1;
+			vertices[index + 1] = data.readFloatLE();
+
+			for (let x = 0; x < 4; x++)
+				boneWeights[index + x] = data.readUInt8();
+
+			for (let x = 0; x < 4; x++)
+				boneIndices[index + x] = data.readUInt8();
 	
-			this.data.move(8); // boneWeight/boneindices.
-	
-			normals[index] = this.data.readFloatLE();
-			normals[index + 2] = this.data.readFloatLE() * -1;
-			normals[index + 1] = this.data.readFloatLE();
+			normals[index] = data.readFloatLE();
+			normals[index + 2] = data.readFloatLE() * -1;
+			normals[index + 1] = data.readFloatLE();
 	
 			const uvIndex = i * 2;
-			uv[uvIndex] = this.data.readFloatLE();
-			uv[uvIndex + 1] = (this.data.readFloatLE() - 1) * -1;
+			uv[uvIndex] = data.readFloatLE();
+			uv[uvIndex + 1] = (data.readFloatLE() - 1) * -1;
 
-			this.data.move(8); // texCoordX2, texCoordY2?
+			data.move(8); // texCoordX2, texCoordY2?
 		}
 
-		this.data.seek(base);
+		data.seek(base);
 	}
 
 	/**
