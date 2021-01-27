@@ -27,6 +27,7 @@ let loaders = [];
 const view = {
 	screenStack: [], // Controls the currently active interface screen.
 	isBusy: 0, // To prevent race-conditions with multiple tasks, we adjust isBusy to indicate blocking states.
+	isDev: !BUILD_RELEASE, // True if in development environment.
 	loadingProgress: '', // Sets the progress text for the loading screen.
 	loadingTitle: '', // Sets the title text for the loading screen.
 	loadPct: -1, // Controls active loading bar percentage.
@@ -45,19 +46,23 @@ const view = {
 	userInputFilterTextures: '', // Value of the 'filter' field for textures.
 	userInputFilterSounds: '', // Value of the 'filter' field for sounds/music.
 	userInputFilterVideos: '', // Value of the 'filter' field for video files.
+	userInputFilterText: '', // Value of the 'filter' field for text files.
 	userInputFilterModels: '', // Value of the 'filter' field for models.
 	userInputFilterMaps: '', // Value of the 'filter' field for maps.
 	selectionTextures: [], // Current user selection of texture files.
 	selectionModels: [], // Current user selection of models.
 	selectionSounds: [], // Current user selection of sounds.
 	selectionVideos: [],  // Current user selection of videos.
+	selectionText: [], // Current user selection of text files.
 	selectionMaps: [], // Current user selection of maps.
 	listfileTextures: [], // Filtered listfile for texture files.
 	listfileSounds: [], // Filtered listfile for sound files.
 	listfileVideos: [], // Filtered listfile for video files.
+	listfileText: [], // Filtered listfile for text files.
 	listfileModels: [], // Filtered listfile for M2/WMO models.
 	availableLocale: Locale, // Available CASC locale.
 	fileDropPrompt: null, // Prompt to display for file drag/drops.
+	textViewerSelectedText: '', // Active text for the text viewer.
 	soundPlayerSeek: 0, // Current seek of the sound player.
 	soundPlayerState: false, // Playing state of the sound player.
 	soundPlayerTitle: 'No File Selected', // Name of the currently playing sound track.
@@ -79,6 +84,9 @@ const view = {
 	mapViewerSelectedMap: null, // Currently selected map.
 	mapViewerChunkMask: null, // Map viewer chunk mask.
 	mapViewerSelection: [], // Map viewer tile selection
+	exportCancelled: false, // Export cancellation state.
+	isXmas: (new Date().getMonth() === 11),
+	regexTooltip: '(a|b) - Matches either a or b.\n[a-f] - Matches characters between a-f.\n[^a-d] - Matches characters that are not between a-d.\n\\s - Matches whitespace characters.\n\\d - Matches any digit.\na? - Matches zero or one of a.\na* - Matches zero or more of a.\na+ - Matches one or more of a.\na{3} - Matches exactly 3 of a.'
 };
 
 /**
@@ -116,8 +124,9 @@ const createProgress = (segments = 1) => {
 
 /**
  * Hide the currently active toast prompt.
+ * @param {boolean} userCancel
  */
-const hideToast = () => {
+const hideToast = (userCancel = false) => {
 	// Cancel outstanding toast expiry timer.
 	if (toastTimer > -1) {
 		clearTimeout(toastTimer);
@@ -125,6 +134,9 @@ const hideToast = () => {
 	}
 
 	view.toast = null;
+
+	if (userCancel)
+		events.emit('toast-cancelled');
 };
 
 /**
@@ -139,8 +151,7 @@ const setToast = (toastType, message, options = null, ttl = 10000, closable = tr
 	view.toast = { type: toastType, message, options, closable };
 
 	// Remove any outstanding toast timer we may have.
-	if (toastTimer > -1)
-		clearTimeout(toastTimer);
+	clearTimeout(toastTimer);
 
 	// Create a timer to remove this toast.
 	if (ttl > -1)
@@ -171,10 +182,12 @@ const registerDropHandler = (handler) => {
 const getDropHandler = (file) => {
 	file = file.toLowerCase();
 
-	for (const handler of dropHandlers)
-		for (const ext of handler.ext)
+	for (const handler of dropHandlers) {
+		for (const ext of handler.ext) {
 			if (file.endsWith(ext))
 				return handler;
+		}
+	}
 	
 	return null;
 };

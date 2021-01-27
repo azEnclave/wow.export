@@ -22,6 +22,10 @@ class ExportHelper {
 	 * @param {string} file 
 	 */
 	static getExportPath(file) {
+		// Remove whitespace due to MTL incompatibility for textures.
+		if (core.view.config.removePathSpaces)
+			file = file.replace(/\s/g, '');
+
 		return path.normalize(path.join(core.view.config.exportDirectory, file));
 	}
 
@@ -39,7 +43,7 @@ class ExportHelper {
 	 * @param {string} file 
 	 * @param {string} ext 
 	 */
-	static replaceExtension(file, ext) {
+	static replaceExtension(file, ext = '') {
 		return path.join(path.dirname(file), path.basename(file, path.extname(file)) + ext);
 	}
 
@@ -51,6 +55,11 @@ class ExportHelper {
 	constructor(count, unit = 'item') {
 		this.count = count;
 		this.unit = unit;
+		this.isFinished = false;
+
+		this.currentTaskName = null;
+		this.currentTaskMax = -1;
+		this.currentTaskValue = -1;
 	}
 
 	/**
@@ -73,10 +82,32 @@ class ExportHelper {
 	 */
 	start() {
 		this.succeeded = 0;
+		this.isFinished = false;
+
 		core.view.isBusy++;
+		core.view.exportCancelled = false;
 
 		log.write('Starting export of %d %s items', this.count, this.unit);
-		core.setToast('progress', util.format('Exporting %d %s, please wait...', this.count, this.unitFormatted), null, -1, false);
+		this.updateCurrentTask();
+
+		core.events.once('toast-cancelled', () => {
+			core.setToast('progress', 'Cancelling export, hold on...', null, -1, false);
+			core.view.exportCancelled = true;
+		});
+	}
+
+	/**
+	 * Returns true if the current export is cancelled. Also calls this.finish()
+	 * as we can assume the export will now stop.
+	 * @returns {boolean}
+	 */
+	isCancelled() {
+		if (core.view.exportCancelled) {
+			this.finish();
+			return true;
+		}
+
+		return false;
 	}
 
 	/**
@@ -84,6 +115,10 @@ class ExportHelper {
 	 * @param {boolean} includeDirLink 
 	 */
 	finish(includeDirLink = true) {
+		// Prevent duplicate calls to finish() in the event of user cancellation.
+		if (this.isFinished)
+			return;
+		
 		log.write('Finished export (%d succeeded, %d failed)', this.succeeded, this.failed);
 
 		if (this.succeeded === this.count) {
@@ -97,13 +132,72 @@ class ExportHelper {
 				core.setToast('success', util.format('Successfully exported %s.', this.lastItem), includeDirLink ? toastOpt : null);
 		} else if (this.succeeded > 0) {
 			// Partial success, not everything exported.
-			core.setToast('info', util.format('Export complete, but %d %s failed to export.', this.failed, this.unitFormatted), TOAST_OPT_LOG);
+			const cancelled = core.view.exportCancelled;
+			core.setToast('info', util.format('Export %s %d %s %s export.', cancelled ? 'cancelled, ' : 'complete, but', this.failed, this.unitFormatted, cancelled ? 'didn\'t' : 'failed to'), cancelled ? null : TOAST_OPT_LOG);
 		} else {
 			// Everything failed.
-			core.setToast('error', util.format('Unable to export %s.', this.unitFormatted), TOAST_OPT_LOG);
+			if (core.view.exportCancelled)	
+				core.setToast('info', 'Export was cancelled by the user.', null);
+			else
+				core.setToast('error', util.format('Unable to export %s.', this.unitFormatted), TOAST_OPT_LOG);
 		}
 
+		this.isFinished = true;
 		core.view.isBusy--;
+	}
+
+	/**
+	 * Set the current task name.
+	 * @param {string} name 
+	 */
+	setCurrentTaskName(name) {
+		this.currentTaskName = name;
+		this.updateCurrentTask();
+	}
+
+	/**
+	 * Set the maximum value of the current task.
+	 * @param {number} max 
+	 */
+	setCurrentTaskMax(max) {
+		this.currentTaskMax = max;
+		this.updateCurrentTask();
+	}
+
+	/**
+	 * Set the value of the current task.
+	 * @param {number} value 
+	 */
+	setCurrentTaskValue(value) {
+		this.currentTaskValue = value;
+		this.updateCurrentTask();
+	}
+
+	/**
+	 * Clear the current progression task.
+	 */
+	clearCurrentTask() {
+		this.currentTaskName = null;
+		this.currentTaskMax = -1;
+		this.currentTaskValue = -1;
+		this.updateCurrentTask();
+	}
+
+	/**
+	 * Update the current task progression.
+	 */
+	updateCurrentTask() {
+		let exportProgress = util.format('Exporting %d / %d %s', this.succeeded, this.count, this.unitFormatted);
+
+		if (this.currentTaskName !== null) {
+			exportProgress += ' (Current task: ' + this.currentTaskName;
+			if (this.currentTaskValue > -1 && this.currentTaskMax > -1)
+				exportProgress += util.format(', %d / %d', this.currentTaskValue, this.currentTaskMax);
+
+			exportProgress += ')';
+		}
+
+		core.setToast('progress', exportProgress, null, -1, true);
 	}
 
 	/**
@@ -120,6 +214,8 @@ class ExportHelper {
 		} else {
 			log.write('Failed to export %s (%s)', item, error);
 		}
+
+		this.updateCurrentTask();
 	}
 }
 

@@ -20,8 +20,11 @@ const WMORenderer = require('../3D/renderers/WMORenderer');
 const WMOExporter = require('../3D/exporters/WMOExporter');
 
 const WDCReader = require('../db/WDCReader');
-const DB_CreatureDisplayInfo = require('../db/schema/CreatureDisplayInfo');
-const DB_CreatureModelData = require('../db/schema/CreatureModelData');
+
+const exportExtensions = {
+	'OBJ': '.obj',
+	'GLTF': '.gltf'
+};
 
 const creatureTextures = new Map();
 const activeSkins = new Map();
@@ -30,7 +33,7 @@ let selectedVariantTexID = 0;
 let selectedFile = null;
 let isFirstModel = true;
 
-let camera, scene;
+let camera, scene, grid;
 const renderGroup = new THREE.Group();
 
 let activeRenderer;
@@ -153,7 +156,6 @@ const updateCameraBounding = () => {
 	const minZ = boundingBox.min.z;
 	const cameraToFarEdge = (minZ < 0) ? -minZ + cameraZ : cameraZ - minZ;
 
-	camera.far = cameraToFarEdge * 3;
 	camera.updateProjectionMatrix();
 
 	const controls = core.view.modelViewerContext.controls;
@@ -181,10 +183,15 @@ const exportFiles = async (files, isLocal = false) => {
 			core.setToast('error', 'The PNG export option only works for model previews. Preview something first!');
 		}
 	} else {
+		const exportSkins = core.view.config.modelsExportSkin;
 		const helper = new ExportHelper(files.length, 'model');
 		helper.start();
 
 		for (const fileName of files) {
+			// Abort if the export has been cancelled.
+			if (helper.isCancelled())
+				return;
+
 			try {
 				const data = await (isLocal ? BufferWrapper.readFile(fileName) : core.view.casc.getFileByName(fileName));
 				let exportPath = isLocal ? fileName : ExportHelper.getExportPath(fileName);
@@ -194,10 +201,27 @@ const exportFiles = async (files, isLocal = false) => {
 					case 'RAW':
 						// Export as raw file with no conversions.
 						await data.writeToFile(exportPath);
+
+						if (exportSkins === true && fileNameLower.endsWith('.m2') === true) {
+							const exporter = new M2Exporter(data, selectedVariantTexID);
+							await exporter.exportTextures(exportPath, true, null, helper);
+
+							const skins = exporter.m2.getSkinList();
+							const skinPath = path.dirname(exportPath);
+							for (const skin of skins) {
+								// Abort if the export has been cancelled.
+								if (helper.isCancelled())
+									return;
+
+								const skinData = await core.view.casc.getFile(skin.fileDataID);
+								await skinData.writeToFile(path.join(skinPath, path.basename(skin.fileName)));
+							}
+						}
 						break;
 
 					case 'OBJ':
-						const exportOBJ = ExportHelper.replaceExtension(exportPath, '.obj');
+					case 'GLTF':
+						exportPath = ExportHelper.replaceExtension(exportPath, exportExtensions[format]);
 
 						if (fileNameLower.endsWith('.m2')) {
 							const exporter = new M2Exporter(data, selectedVariantTexID);
@@ -206,7 +230,14 @@ const exportFiles = async (files, isLocal = false) => {
 							if (fileName == activePath)
 								exporter.setGeosetMask(core.view.modelViewerGeosets);
 
-							await exporter.exportAsOBJ(exportOBJ, core.view.config.modelsExportCollision);
+							if (format === 'OBJ')
+								await exporter.exportAsOBJ(exportPath, core.view.config.modelsExportCollision, helper);
+							else if (format === 'GLTF')
+								await exporter.exportAsGLTF(exportPath, helper);
+
+							// Abort if the export has been cancelled.
+							if (helper.isCancelled())
+								return;
 						} else if (fileNameLower.endsWith('.wmo')) {
 							// WMO loading currently loads group objects directly from CASC.
 							// In order to load these properly, we would need to know the internal name here.
@@ -221,8 +252,15 @@ const exportFiles = async (files, isLocal = false) => {
 								exporter.setDoodadSetMask(core.view.modelViewerWMOSets);
 							}
 
-							await exporter.exportAsOBJ(exportOBJ);
+							if (format === 'OBJ')
+								await exporter.exportAsOBJ(exportPath, helper);
+							else if (format === 'GLTF')
+								await exporter.exportAsGLTF(exportPath, helper);
 							WMOExporter.clearCache();
+
+							// Abort if the export has been cancelled.
+							if (helper.isCancelled())
+								return;
 						} else {
 							throw new Error('Unexpected model format: ' + fileName);
 						}
@@ -268,12 +306,17 @@ core.registerDropHandler({
 
 // The first time the user opens up the model tab, initialize 3D preview.
 core.events.once('screen-tab-models', () => {
-	camera = new THREE.PerspectiveCamera(70, undefined, 0.01, 10);
+	camera = new THREE.PerspectiveCamera(70, undefined, 0.01, 2000);
 
 	scene = new THREE.Scene();
 	const light = new THREE.HemisphereLight(0xffffff, 0x080820, 1);
 	scene.add(light);
 	scene.add(renderGroup);
+
+	grid = new THREE.GridHelper(100, 100, 0x57afe2, 0x808080);
+
+	if (core.view.config.modelViewerShowGrid)
+		scene.add(grid);
 
 	// WoW models are by default facing the wrong way; rotate everything.
 	renderGroup.rotateOnAxis(new THREE.Vector3(0, 1, 0), -90 * (Math.PI / 180));
@@ -286,14 +329,14 @@ core.registerLoadFunc(async () => {
 	try {
 		log.write('Loading creature textures...');
 
-		const creatureDisplayInfo = new WDCReader('DBFilesClient/CreatureDisplayInfo.db2', DB_CreatureDisplayInfo);
+		const creatureDisplayInfo = new WDCReader('DBFilesClient/CreatureDisplayInfo.db2');
 		await creatureDisplayInfo.parse();
 
 		const textureMap = new Map();
 
 		// Map all available texture fileDataIDs to model IDs.
 		for (const displayRow of creatureDisplayInfo.getAllRows().values()) {
-			const textures = displayRow.TextureVariationFieldDataID.filter(e => e > 0);
+			const textures = displayRow.TextureVariationFileDataID.filter(e => e > 0);
 
 			if (textures.length > 0) {
 				if (textureMap.has(displayRow.ModelID))
@@ -303,7 +346,7 @@ core.registerLoadFunc(async () => {
 			}
 		}
 
-		const creatureModelData = new WDCReader('DBFilesClient/CreatureModelData.db2', DB_CreatureModelData);
+		const creatureModelData = new WDCReader('DBFilesClient/CreatureModelData.db2');
 		await creatureModelData.parse();
 
 		// Using the texture mapping, map all model fileDataIDs to used textures.
@@ -324,7 +367,7 @@ core.registerLoadFunc(async () => {
 
 		log.write('Loaded textures for %d creatures', creatureTextures.size);
 	} catch (e) {
-		log.write('Unable to load creature model data: %s', e.message);
+		log.write('Unable to load creature model info or creature model data: %s', e.message);
 	}
 
 	// Track changes to the visible model listfile types.
@@ -351,6 +394,13 @@ core.registerLoadFunc(async () => {
 			selectedVariantTexID = fileDataID;
 			activeRenderer.loadNPCVariantTexture(fileDataID);
 		}
+	});
+
+	core.view.$watch('config.modelViewerShowGrid', () => {
+		if (core.view.config.modelViewerShowGrid)
+			scene.add(grid);
+		else
+			scene.remove(grid);
 	});
 
 	// Track selection changes on the model listbox and preview first model.

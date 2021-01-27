@@ -15,8 +15,11 @@ Vue.component('listbox', {
 	 * keyinput: If true, listbox registers for keyboard input.
 	 * regex: If true, filter will be treated as a regular expression.
 	 * copydir: If true, CTRL + C will only copy directories.
+	 * copytrimwhitespace: If true, whitespace is trimmed from copied paths.
+	 * includefilecount: If true, includes a file counter on the component.
+	 * unittype: Unit name for what the listbox contains. Used with includefilecount.
 	 */
-	props: ['items', 'filter', 'selection', 'single', 'keyinput', 'regex', 'copydir'],
+	props: ['items', 'filter', 'selection', 'single', 'keyinput', 'regex', 'copydir', 'copytrimwhitespace', 'includefilecount', 'unittype'],
 
 	/**
 	 * Reactive instance data.
@@ -49,7 +52,7 @@ Vue.component('listbox', {
 
 		// Register observer for layout changes.
 		this.observer = new ResizeObserver(() => this.resize());
-		this.observer.observe(this.$el);
+		this.observer.observe(this.$refs.root);
 	},
 
 	/**
@@ -142,8 +145,8 @@ Vue.component('listbox', {
 		 * is resized due to layout changes.
 		 */
 		resize: function() {
-			this.scroll = (this.$el.clientHeight - (this.$refs.scroller.clientHeight)) * this.scrollRel;
-			this.slotCount = Math.floor(this.$el.clientHeight / 26);
+			this.scroll = (this.$refs.root.clientHeight - (this.$refs.scroller.clientHeight)) * this.scrollRel;
+			this.slotCount = Math.floor(this.$refs.root.clientHeight / 26);
 		},
 
 		/**
@@ -151,7 +154,7 @@ Vue.component('listbox', {
 		 * calculates the relative (0-1) offset based on the scroll.
 		 */
 		recalculateBounds: function() {
-			const max = this.$el.clientHeight - (this.$refs.scroller.clientHeight);
+			const max = this.$refs.root.clientHeight - (this.$refs.scroller.clientHeight);
 			this.scroll = Math.min(max, Math.max(0, this.scroll));
 			this.scrollRel = this.scroll / max;
 		},
@@ -190,9 +193,15 @@ Vue.component('listbox', {
 		 * @param {WheelEvent} e
 		 */
 		wheelMouse: function(e) {
-			const weight = this.$el.clientHeight - (this.$refs.scroller.clientHeight);
-			this.scroll += ((e.deltaY / 10) * this.itemWeight) * weight;
-			this.recalculateBounds();
+			const weight = this.$refs.root.clientHeight - (this.$refs.scroller.clientHeight);
+			const child = this.$refs.root.querySelector('.item');
+
+			if (child !== null) {
+				const scrollCount = Math.floor(this.$refs.root.clientHeight / child.clientHeight);
+				const direction = e.deltaY > 0 ? 1 : -1;
+				this.scroll += ((scrollCount * this.itemWeight) * weight) * direction;
+				this.recalculateBounds();
+			}
 		},
 
 		/**
@@ -215,6 +224,10 @@ Vue.component('listbox', {
 				if (this.copydir)
 					entries = entries.map(e => path.dirname(e));
 
+				// Remove whitespace from paths to keep consistency with exports.
+				if (this.copytrimwhitespace)
+					entries = entries.map(e => e.replace(/\s/g, ''));
+
 				nw.Clipboard.get().set(entries.join('\n'), 'text');
 			} else {
 				// Arrow keys.
@@ -234,7 +247,7 @@ Vue.component('listbox', {
 							diff += 1;
 
 						if ((isArrowUp && nextIndex < lastViewIndex) || (isArrowDown && nextIndex >= lastViewIndex)) {
-							const weight = this.$el.clientHeight - (this.$refs.scroller.clientHeight);
+							const weight = this.$refs.root.clientHeight - (this.$refs.scroller.clientHeight);
 							this.scroll += ((diff * this.itemWeight) * weight) * delta;
 							this.recalculateBounds();
 						}
@@ -282,9 +295,10 @@ Vue.component('listbox', {
 						const lowest = Math.min(lastSelectIndex, thisSelectIndex);
 						const range = this.filteredItems.slice(lowest, lowest + delta + 1);
 
-						for (const select of range)
+						for (const select of range) {
 							if (this.selection.indexOf(select) === -1)
 								this.selection.push(select);
+						}
 					}				
 				} else if (checkIndex === -1 || (checkIndex > -1 && this.selection.length > 1)) {
 					// Normal click, replace entire selection.
@@ -300,10 +314,11 @@ Vue.component('listbox', {
 	/**
 	 * HTML mark-up to render for this component.
 	 */
-	template: `<div class="ui-listbox" @wheel="wheelMouse">
+	template: `<div><div ref="root" class="ui-listbox" @wheel="wheelMouse">
 		<div class="scroller" ref="scroller" @mousedown="startMouse" :class="{ using: isScrolling }" :style="{ top: scrollOffset }"><div></div></div>
 		<div v-for="(item, i) in displayItems" class="item" @click="selectItem(item, $event)" :class="{ selected: selection.includes(item) }">
-			<span v-for="(sub, si) in item.split('\\31')" :class="'sub sub-' + si">{{ sub }}</span>
+			<span v-for="(sub, si) in item.split('\\31')" :class="'sub sub-' + si" :data-item="sub">{{ sub }}</span>
 		</div>
-	</div>`
+	</div>
+	<div class="list-status">{{ filteredItems.length }} {{ unittype + (filteredItems.length != 1 ? 's' : '') }} found.</div></div>`
 });

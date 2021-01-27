@@ -18,8 +18,16 @@ class EncryptionError extends Error {
 		this.key = key;
 
 		// Maintain stack trace (V8).
-		if (Error.captureStackTrace)
-			Error.captureStackTrace(this, EncryptionError);
+		Error.captureStackTrace?.(this, EncryptionError);
+	}
+}
+
+class BLTEIntegrityError extends Error {
+	constructor(expected, actual) {
+		super(util.format('[BLTE] Invalid block data hash. Expected %s, got %s!', expected, actual));
+		
+		// Maintain stack trace (V8).
+		Error.captureStackTrace?.(this, BLTEIntegrityError);
 	}
 }
 
@@ -141,7 +149,7 @@ class BLTEReader extends BufferWrapper {
 			this._blte.seek(bltePos);
 
 			if (blockHash !== block.Hash)
-				throw new Error(util.format('[BLTE] Invalid block data hash. Expected %s, got %s!', block.Hash, blockHash));
+				throw new BLTEIntegrityError(block.Hash, blockHash);
 		}
 
 		this._handleBlock(this._blte, bltePos + block.CompSize, this.blockIndex);
@@ -170,7 +178,7 @@ class BLTEReader extends BufferWrapper {
 					if (e instanceof EncryptionError) {
 						// Partial decryption allows us to leave zeroed data.
 						if (this.partialDecrypt)
-							this._ofs += blockEnd - block.offset;
+							this._ofs += this.blocks[index].DecompSize;
 						else
 							throw e;
 					}
@@ -276,8 +284,10 @@ class BLTEReader extends BufferWrapper {
 
 		// Ensure all blocks required for this read are available.
 		const pos = this.offset + length;
-		while (pos > this.blockWriteIndex)
-			this._processBlock();
+		while (pos > this.blockWriteIndex) {
+			if (this._processBlock() === false)
+				return;
+		}
 	}
 
 	/**
@@ -313,4 +323,4 @@ class BLTEReader extends BufferWrapper {
 	}
 }
 
-module.exports = { BLTEReader, EncryptionError };
+module.exports = { BLTEReader, EncryptionError, BLTEIntegrityError };

@@ -81,6 +81,7 @@ const config = require('./js/config');
 const tactKeys = require('./js/casc/tact-keys');
 const blender = require('./js/blender');
 const fsp = require('fs').promises;
+const TestRunner = require('./js/iat/test-runner');
 
 require('./js/components/listbox');
 require('./js/components/listboxb');
@@ -95,6 +96,7 @@ require('./js/ui/source-select');
 require('./js/ui/tab-textures');
 require('./js/ui/tab-audio');
 require('./js/ui/tab-videos');
+require('./js/ui/tab-text.js');
 require('./js/ui/tab-models');
 require('./js/ui/tab-maps');
 
@@ -151,13 +153,41 @@ document.addEventListener('click', function(e) {
 			},
 
 			/**
+			 * Opens the runtime application log from the application data directory.
+			 */
+			openRuntimeLog() {
+				log.openRuntimeLog();
+			},
+
+			/**
+			 * Initiate the integration tests.
+			 */
+			async runIntegrationTests() {
+				this.setScreen('loading', true);
+
+				this.loadingTitle = 'Running integration tests...';
+				this.loadingProgress = 'Initializing';
+				this.loadPct = 0;
+
+				const runner = new TestRunner();
+				await runner.run();
+
+				this.showPreviousScreen();
+				core.setToast('success', 'Integration tests have completed, see runtime log for results.', { 'View Log': () => log.openRuntimeLog() });
+
+				// Reset the load progress (to hide Windows taskbar progress).
+				this.loadPct = -1;
+			},
+
+			/**
 			 * Mark all WMO groups to the given state.
 			 * @param {boolean} state 
 			 */
 			setAllWMOGroups: function(state) {
-				if (this.modelViewerWMOGroups)
+				if (this.modelViewerWMOGroups) {
 					for (const node of this.modelViewerWMOGroups)
 						node.checked = state;
+				}
 			},
 
 			/**
@@ -165,9 +195,10 @@ document.addEventListener('click', function(e) {
 			 * @param {boolean} state 
 			 */
 			setAllGeosets: function(state) {
-				if (this.modelViewerGeosets)
+				if (this.modelViewerGeosets) {
 					for (const node of this.modelViewerGeosets)
 						node.checked = state;
+				}
 			},
 
 			/**
@@ -256,9 +287,10 @@ document.addEventListener('click', function(e) {
 
 			/**
 			 * Hide the toast bar.
+			 * @param {boolean} userCancel
 			 */
-			hideToast: function() {
-				core.hideToast();
+			hideToast: function(userCancel = false) {
+				core.hideToast(userCancel)
 			},
 
 			/**
@@ -270,6 +302,22 @@ document.addEventListener('click', function(e) {
 		},
 
 		computed: {
+			/**
+			 * Returns true if the export directory contains spaces.
+			 * @returns {boolean}
+			 */
+			isExportPathConcerning: function() {
+				return !!this.config?.exportDirectory?.match(/\s/g);
+			},
+
+			/**
+			 * Returns true if the editing config directory contains spaces.
+			 * @returns {boolean}
+			 */
+			isEditExportPathConcerning: function() {
+				return !!this.configEdit?.exportDirectory?.match(/\s/g);
+			},
+
 			/**
 			 * Returns the currently 'active' screen, which is first on the stack.
 			 */
@@ -295,9 +343,10 @@ document.addEventListener('click', function(e) {
 			 * Return the locale key for the configured CASC locale.
 			 */
 			selectedLocaleKey: function() {
-				for (const [key, flag] of Object.entries(this.availableLocale.flags))
+				for (const [key, flag] of Object.entries(this.availableLocale.flags)) {
 					if (flag === this.config.cascLocale)
 						return key;
+				}
 
 				return 'unUN';
 			},
@@ -450,7 +499,7 @@ document.addEventListener('click', function(e) {
 			// to the file constantly during heavy cache usage. Postponing until
 			// next tick would not help due to async and potential IO/net delay.
 			updateTimer = setTimeout(() => {
-				fsp.writeFile(constants.CACHE.SIZE, nv, 'utf8');
+				fsp.writeFile(constants.CACHE.SIZE, nv.toString(), 'utf8');
 			}, constants.CACHE.SIZE_UPDATE_DELAY);
 		});
 	});

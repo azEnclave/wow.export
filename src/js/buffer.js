@@ -7,6 +7,7 @@ const util = require('util');
 const crypto = require('crypto');
 const zlib = require('zlib');
 const path = require('path');
+const crc32 = require('./crc32');
 const fsp = require('fs').promises;
 
 const LITTLE_ENDIAN = {
@@ -63,11 +64,16 @@ class BufferWrapper {
 
 	/**
 	 * Create a BufferWrapper from a canvas element.
-	 * @param {HTMLCanvasElement} canvas 
+	 * @param {HTMLCanvasElement|OffscreenCanvas} canvas 
 	 * @param {string} mimeType 
 	 */
 	static async fromCanvas(canvas, mimeType) {
-		const blob = await new Promise(res => canvas.toBlob(res, mimeType));
+		let blob;
+		if (canvas instanceof OffscreenCanvas)
+			blob = await canvas.convertToBlob({ type: mimeType });
+		else
+			blob = await new Promise(res => canvas.toBlob(res, mimeType));
+
 		return new BufferWrapper(Buffer.from(await blob.arrayBuffer()));
 	}
 
@@ -152,6 +158,46 @@ class BufferWrapper {
 			throw new Error(util.format('move() offset out of bounds %d -> %d ! %d', ofs, pos, this.byteLength));
 
 		this._ofs = pos;
+	}
+
+	/**
+	 * Read one or more signed integers of variable byte length in little endian.
+	 * @param {number} byteLength 
+	 * @param {number} [count=1]
+	 * @returns {number|number[]}
+	 */
+	readIntLE(byteLength, count = 1) {
+		return this._readInt(count, LITTLE_ENDIAN.READ_INT, byteLength);
+	}
+
+	/**
+	 * Read one or more unsigned integers of variable byte length in little endian.
+	 * @param {number} byteLength 
+	 * @param {number} [count=1]
+	 * @returns {number|number[]}
+	 */
+	readUIntLE(byteLength, count = 1) {
+		return this._readInt(count, LITTLE_ENDIAN.READ_UINT, byteLength);
+	}
+
+	/**
+	 * Read one or more signed integers of variable byte length in big endian.
+	 * @param {number} byteLength 
+	 * @param {number} [count=1]
+	 * @returns {number}
+	 */
+	readIntBE(byteLength, count = 1) {
+		return this._readInt(count, BIG_ENDIAN.READ_INT, byteLength);
+	}
+	
+	/**
+	 * Read one or more unsigned integers of variable byte length in big endian.
+	 * @param {number} byteLength 
+	 * @param {number} [count=1]
+	 * @returns {number}
+	 */
+	readUIntBE(byteLength, count = 1) {
+		return this._readInt(count, BIG_ENDIAN.READ_UINT, byteLength);
 	}
 
 	/**
@@ -437,14 +483,11 @@ class BufferWrapper {
 
 	/**
 	 * Read a buffer from this buffer.
-	 * @param {number} length How many bytes to read into the buffer.
+	 * @param {?number} length How many bytes to read into the buffer.
 	 * @param {boolean} wrap If true, returns BufferWrapper, else raw buffer.
 	 * @param {boolean} inflate If true, data will be decompressed using inflate.
 	 */
-	readBuffer(length = -1, wrap = true, inflate = false) {
-		if (!length) // Default to consuming all remaining bytes.
-			length = this.remainingBytes;
-
+	readBuffer(length = this.remainingBytes, wrap = true, inflate = false) {
 		// Ensure we have enough data left to fulfill this.
 		this._checkBounds(length);
 
@@ -460,18 +503,30 @@ class BufferWrapper {
 
 	/**
 	 * Read a string from the buffer.
-	 * @param {number} length 
-	 * @param {string} encoding 
+	 * @param {?number} length 
+	 * @param {string} [encoding=utf8]
+	 * @returns {string}
 	 */
-	readString(length = 0, encoding = 'utf8') {
-		if (length <= 0) // Default to consuming all remaining bytes.
-			length = this.remainingBytes;
+	readString(length = this.remainingBytes, encoding = 'utf8') {
+		// If length is zero, just return an empty string.
+		if (length === 0)
+			return '';
 
 		this._checkBounds(length);
 		const str = this._buf.toString(encoding, this._ofs, this._ofs + length);
 		this._ofs += length;
 
 		return str;
+	}
+
+	/**
+	 * Read a string from the buffer and parse it as JSON.
+	 * @param {?number} length
+	 * @param {encoding} [encoding=utf8]
+	 * @returns {object}
+	 */
+	readJSON(length = this.remainingBytes, encoding = 'utf8') {
+		return JSON.parse(this.readString(length, encoding));
 	}
 
 	/**
@@ -483,7 +538,7 @@ class BufferWrapper {
 		const ofs = this._ofs;
 		this.seek(0);
 
-		const str = this.readString(0, encoding);
+		const str = this.readString(this.remainingBytes, encoding);
 		this.seek(ofs);
 
 		return str.split(/\r\n|\n|\r/);
@@ -776,19 +831,27 @@ class BufferWrapper {
 	}
 
 	/**
+	 * Get the index of the given char from start.
+	 * Defaults to the current reader offset.
+	 * @param {string} char 
+	 * @param {number} start 
+	 * @returns {number}
+	 */
+	indexOfChar(char, start = this.offset) {
+		if (char.length > 1)
+			throw new Error('BufferWrapper.indexOfChar() given string, expected single character.');
+
+		return this.indexOf(char.charCodeAt(0), start);
+	}
+
+	/**
 	 * Get the index of the given byte from start.
 	 * Defaults to the current reader offset.
-	 * @param {number|string} byte
+	 * @param {number} byte
 	 * @param {number} start 
+	 * @returns {number}
 	 */
 	indexOf(byte, start = this.offset) {
-		if (typeof byte === 'string') {
-			if (byte.length > 1)
-				throw new Error('.indexOf() given string, expected single character.');
-
-			byte = byte.charCodeAt(0);
-		}
-
 		const resetPos = this.offset;
 		this.seek(start);
 		
@@ -863,11 +926,28 @@ class BufferWrapper {
 	 * Check if this buffer is entirely zeroed.
 	 */
 	isZeroed() {
-		for (let i = 0, n = this.byteLength; i < n; i++)
+		for (let i = 0, n = this.byteLength; i < n; i++) {
 			if (this._buf[i] !== 0x0)
 				return false;
+		}
 
 		return true;
+	}
+
+	/**
+	 * Get the CRC32 checksum for this buffer.
+	 * @returns {number}
+	 */
+	getCRC32() {
+		return crc32(this.raw);
+	}
+
+	/**
+	 * Returns a new deflated buffer using the contents of this buffer.
+	 * @returns {BufferWrapper}
+	 */
+	deflate() {
+		return new BufferWrapper(zlib.deflateSync(this._buf));
 	}
 
 	/**

@@ -4,6 +4,7 @@
 	License: MIT
  */
 const BufferWrapper = require('../buffer');
+const PNGWriter = require('../png-writer');
 
 const DXT1 = 0x1;
 const DXT3 = 0x2;
@@ -68,15 +69,17 @@ class BLPImage {
 
 		// Calculate available mipmaps..
 		this.mapCount = 0;
-		for (let ofs of this.mapOffsets)
+		for (let ofs of this.mapOffsets) {
 			if (ofs !== 0)
 				this.mapCount++;
+		}
 
 		// Read colour palette..
 		this.palette = [];
-		if (this.encoding === 1)
+		if (this.encoding === 1) {
 			for (let i = 0; i < 256; i++)
 				this.palette[i] = this.data.readUInt8(4);
+		}
 	}
 
 	/**
@@ -106,14 +109,24 @@ class BLPImage {
 	}
 
 	/**
-	 * Save this BLP to a file.
+	 * Save this BLP as PNG file.
 	 * @param {string} file 
-	 * @param {string} mimeType 
 	 * @param {boolean} useAlpha 
+	 * @param {number} mipmap
 	 */
-	async saveToFile(file, mimeType, useAlpha = true) {
-		const buf = await BufferWrapper.fromCanvas(this.toCanvas(useAlpha), mimeType);
-		await buf.writeToFile(file);
+	async saveToPNG(file, useAlpha = true, mipmap = 0) {
+		this._prepare(mipmap);
+
+		const png = new PNGWriter(this.scaledWidth, this.scaledHeight);
+		const pixelData = png.getPixelData();
+
+		switch (this.encoding) {
+			case 1: this._getUncompressed(pixelData, useAlpha); break;
+			case 2: this._getCompressed(pixelData, useAlpha); break;
+			case 3: this._marshalBGRA(pixelData, useAlpha); break;
+		}
+
+		await png.write(file);
 	}
 
 	/**

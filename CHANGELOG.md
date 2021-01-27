@@ -1,3 +1,82 @@
+0.1.24 (17-12-2020)
+- Fixed missing escape slashes in regex guide tooltip.
+- Fixed an issue that prevented exporting Classic WMOs with missing materials.
+- Added a 3D grid to the model viewer (can be toggled on the sidebar).
+- Added the 'Split Large Terrain Maps' options to settings.
+- Added the 'Split Alpha Maps option to settings.
+- Removed the 'Map Texture Split Threshold' option from settings.
+
+0.1.23 (28-11-2020)
+- Added a warning to the configuration screen for export directories that contain spaces.
+- Added indicator for when regular expression searching is enabled with quick-guide tooltip.
+
+0.1.22 (26-11-2020)
+- Fixed issue that prevented raw M2/skin exports.
+- Fixed an issue with local user-defined listfiles not working without a wildcard.
+- Fixed an issue that prevented exporting of cinematics that are locally corrupted.
+
+0.1.21 (25-11-2020)
+- Added new 'Text' tab which allows preview/exporting of subtitles, Lua, XML, HTML, config and more.
+- Fixed an issue that prevented data tables from parsing on newest WoW builds.
+
+0.1.20 (23-11-2020)
+- Added expansion icons to the map exporter list.
+- Added ability to cancel exports that are in-progress.
+- Added verbose progress information for heavy export tasks (WMOs, ADTs, etc).
+- Added 'Strip Whitespace From Copied Paths' option to settings.
+- Fixed an issue exporting pre-baked map tiles that lack height textures. (example: https://i.imgur.com/v9nRgjk.jpg)
+- Fixed an issue that caused the toast bar to disappear while an export was in progress.
+- Fixed an issue with exported WMO objects having .obj prefixed MTL names.
+- Fixed an issue that prevented BLTE from parsing data blocks correctly.
+- Using the automatic Blender add-on installer now targets all installed versions of Blender on your system.
+- Definitions for data tables are now automatically updated (update repository can be configured in settings).
+
+0.1.19 (19-11-2020)
+- Added 'Strip Whitespace From Export Paths' option to settings (enabled by default).
+- Added the FileDataID field to ModelPlacementInformation CSV files.
+
+0.1.18 (10-11-2020)
+- Added 'Texture Alpha' option to model exporter, allowing binary control of texture transparency on models.
+- Added geoset labels for new Shadowlands customization.
+- Fixed issue that prevented wow.export from failing on corrupt game installations.
+
+0.1.17 (25-10-2020)
+- Added ability to export M2 meta data as .json (disabled by default).
+
+0.1.16 (07-09-2020)
+- Fixed issue that prevented wow.export from working when launched from the start menu.
+
+0.1.15 (16-08-2020)
+- Fixed issue that caused wow.export to crash when registering large amounts of encryption keys.
+- Exporting M2 models as RAW will now include related BLP files.
+- Fixed inconsistency with whitespace in exported file paths (it is now always stripped).
+
+0.1.14 (08-08-2020)
+- The map viewer now supports selecting all tiles at once (Control + A).
+- Added 'Include Holes' option, allowing map tiles to be exported without holes.
+
+0.1.13 (30-07-2020)
+- Added information tooltips to export control checkboxes.
+- Added a 'View Log' button to the top-right navigation for quick access of the application log.
+- Fixed issue that prevented mouse wheel navigation on listboxes from being accurate.
+
+0.1.12 (23-07-2020)
+- Fixed issue that prevented Blender add-on from working on non-English Blender clients.
+- Fixed issue that caused exported PNG files to be premultipled (black splotches).
+- Added option to export game objects with map tiles (WIP, slightly broken).
+
+0.1.11 (21-07-2020)
+- Added 'Export .skin files' option for raw M2 exporting.
+- Fixed issue that prevented some Classic WMOs from exporting correctly due to filename whitespace.
+- Exported models now have proper material names instead of fileDataIDs.
+- MTL material names are now prefixed with a non-numeric value for compatibility with Maya.
+
+0.1.10 (19-07-2020)
+- Fixed issue that prevented doodad sets from exporting/previewing under certain circumstances.
+- 3D model panning via W, A, S, D, Q, E keys implemented.
+- Allow users to manually configure the map texture split threshold in configuration.
+- Added 'Use Absolute Model Placement Paths' option.
+
 0.1.9 (13-01-2020)
 - 'Enable Shared Textures' now exports textures to their full path, rather than a unified directory.
 - Added a 'Use Absolute MTL Paths' option in settings for Cinema 4D users.
